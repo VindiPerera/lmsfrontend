@@ -1,0 +1,635 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:lms/core/constants/app_colors.dart';
+import 'package:lms/core/constants/app_text_styles.dart';
+import 'package:lms/features/auth/providers/auth_provider.dart';
+import 'package:lms/features/dashboard/screens/admin_analytics_screen.dart';
+import 'package:lms/features/profile/screens/profile_screen.dart';
+import 'package:lms/core/services/lecture_service.dart';
+import 'package:lms/core/services/package_service.dart';
+import 'package:lms/features/courses/screens/add_lecture_screen.dart';
+import 'package:lms/features/courses/screens/add_package_screen.dart';
+import 'package:lms/core/models/lecture_model.dart';
+import 'package:lms/core/models/package_model.dart';
+import 'package:lms/features/tasks/screens/submissions_view.dart';
+
+/// Responsive Teacher Dashboard – sidebar nav on wide screens, bottom nav on mobile.
+/// Serves as the master dashboard for the app owner/instructor.
+class TeacherDashboard extends StatefulWidget {
+  const TeacherDashboard({super.key});
+
+  @override
+  State<TeacherDashboard> createState() => _TeacherDashboardState();
+}
+
+class _TeacherDashboardState extends State<TeacherDashboard> {
+  int _selectedIndex = 0;
+
+  final List<_NavItem> _navItems = const [
+    _NavItem(icon: Icons.dashboard_rounded, label: 'Dashboard'),
+    _NavItem(icon: Icons.people_rounded, label: 'Students'),
+    _NavItem(icon: Icons.school_rounded, label: 'Courses'),
+    _NavItem(icon: Icons.assignment_turned_in_rounded, label: 'Submissions'),
+    _NavItem(icon: Icons.settings_rounded, label: 'Settings'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final isWide = width >= 768;
+
+    return Scaffold(
+      body: isWide ? _buildWideLayout() : _buildNarrowLayout(),
+      bottomNavigationBar: isWide ? null : _buildBottomNav(),
+      floatingActionButton: _selectedIndex == 2
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                _showAddContentOptions(context);
+              },
+              backgroundColor: AppColors.primary,
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: Text(
+                'Create',
+                style: AppTextStyles.label.copyWith(color: Colors.white),
+              ),
+            )
+          : null,
+    );
+  }
+
+  void _showAddContentOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Create New Content', style: AppTextStyles.heading3),
+            const SizedBox(height: 16),
+            ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.video_library_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              title: const Text('New Course'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddLectureScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.inventory_2_rounded,
+                  color: AppColors.accent,
+                ),
+              ),
+              title: const Text('New Package'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddPackageScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Wide (Tablet / Web) ───────────────────────────────
+  Widget _buildWideLayout() {
+    return Row(
+      children: [
+        // Sidebar
+        Container(
+          width: 260,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border(
+              right: BorderSide(
+                color: AppColors.textHint.withValues(alpha: 0.15),
+                width: 1,
+              ),
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 32),
+                // Brand
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.cast_for_education_rounded,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Instructor', style: AppTextStyles.heading3),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                // Nav items
+                ..._navItems.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final item = entry.value;
+                  final selected = i == _selectedIndex;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: Material(
+                      color: selected
+                          ? AppColors.primary.withValues(alpha: 0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => setState(() => _selectedIndex = i),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                item.icon,
+                                color: selected
+                                    ? AppColors.primary
+                                    : AppColors.textHint,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 14),
+                              Text(
+                                item.label,
+                                style: AppTextStyles.label.copyWith(
+                                  color: selected
+                                      ? AppColors.primary
+                                      : AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                const Spacer(),
+                // Sign out
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.read<AuthProvider>().signOut(),
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                      label: Text('Sign Out', style: AppTextStyles.bodyMedium),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: AppColors.textHint.withValues(alpha: 0.2),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ),
+        // Content
+        Expanded(child: _buildContent()),
+      ],
+    );
+  }
+
+  // ── Narrow (Mobile) ───────────────────────────────────
+  Widget _buildNarrowLayout() {
+    return _buildContent();
+  }
+
+  Widget _buildBottomNav() {
+    return NavigationBar(
+      selectedIndex: _selectedIndex,
+      onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+      backgroundColor: AppColors.surface,
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      indicatorColor: AppColors.primary.withValues(alpha: 0.1),
+      destinations: _navItems
+          .map(
+            (item) => NavigationDestination(
+              icon: Icon(item.icon, color: AppColors.textSecondary),
+              selectedIcon: Icon(item.icon, color: AppColors.primary),
+              label: item.label,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  // ── Content Panels ────────────────────────────────────
+  Widget _buildContent() {
+    final authProvider = context.watch<AuthProvider>();
+    final user = authProvider.userModel;
+
+    return Container(
+      color: AppColors.background,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with back button for mobile
+              // Only show "Instructor Dashboard" header on Overview tab (index 0) or generic tabs.
+              // Hide on "Courses" tab (index 2) to avoid overlap with course management UI.
+              if (_selectedIndex != 2) ...[
+                Row(
+                  children: [
+                    if (MediaQuery.of(context).size.width < 768)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Instructor Dashboard',
+                            style: AppTextStyles.heading2,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Welcome back, ${user?.name ?? 'Teacher'}',
+                            style: AppTextStyles.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (MediaQuery.of(context).size.width < 768)
+                      IconButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileScreen(),
+                          ),
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.08,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.person_rounded,
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+              ],
+
+              // ── Dynamic Content based on selected tab ──
+              if (_selectedIndex == 0)
+                const AdminAnalyticsScreen()
+              else if (_selectedIndex == 2)
+                _buildCoursesTab(context)
+              else if (_selectedIndex == 3)
+                const SubmissionsView()
+              else ...[
+                Text(
+                  _navItems[_selectedIndex].label,
+                  style: AppTextStyles.heading2,
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppColors.textHint.withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        _navItems[_selectedIndex].icon,
+                        color: AppColors.textHint.withValues(alpha: 0.3),
+                        size: 56,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '${_navItems[_selectedIndex].label} management coming soon.',
+                        style: AppTextStyles.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Courses Tab ───────────────────────────────────────
+  Widget _buildCoursesTab(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header for Courses Tab
+        Text('Manage Courses', style: AppTextStyles.heading2),
+        const SizedBox(height: 16),
+
+        // Action Buttons (Optional, since we added FAB)
+        // Keep them for quick access on desktop/tablet where FAB might be less prominent
+        if (MediaQuery.of(context).size.width >= 768)
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddLectureScreen()),
+                ),
+                icon: const Icon(Icons.add_box_rounded, size: 18),
+                label: const Text('New Course'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AddPackageScreen()),
+                ),
+                icon: const Icon(Icons.collections_bookmark_rounded, size: 18),
+                label: const Text('New Package'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: 24),
+
+        Text('Active Courses', style: AppTextStyles.heading3),
+        const SizedBox(height: 12),
+        StreamBuilder<List<LectureModel>>(
+          stream: LectureService().getAllLecturesStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+            final lectures = snapshot.data ?? [];
+            if (lectures.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(32),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.black.withValues(alpha: 0.05),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.school_outlined,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No courses created yet.',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.separated(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: lectures.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final lecture = lectures[index];
+                return _buildLectureCard(context, lecture);
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 32),
+        Text('Active Packages', style: AppTextStyles.heading3),
+        const SizedBox(height: 12),
+        StreamBuilder<List<PackageModel>>(
+          stream: PackageService().getAllPackagesStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final packages = snapshot.data ?? [];
+            if (packages.isEmpty) return const Text('No packages created yet.');
+
+            return ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: packages.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final p = packages[index];
+                return ListTile(
+                  tileColor: AppColors.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: AppColors.textHint.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  leading: const Icon(
+                    Icons.collections_rounded,
+                    color: AppColors.accent,
+                  ),
+                  title: Text(p.title, style: AppTextStyles.bodyLarge),
+                  subtitle: Text(
+                    '${p.includedLectureIds.length} Courses inside',
+                  ),
+                  trailing: Text(
+                    '\$${p.price}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddPackageScreen(existingPackage: p),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLectureCard(BuildContext context, LectureModel lecture) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AddLectureScreen(existingLecture: lecture),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              height: 60,
+              width: 60,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                image: (lecture.thumbnailUrl?.isNotEmpty ?? false)
+                    ? DecorationImage(
+                        image: NetworkImage(lecture.thumbnailUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: (lecture.thumbnailUrl?.isEmpty ?? true)
+                  ? const Icon(Icons.videocam_rounded, color: AppColors.primary)
+                  : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    lecture.title,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${lecture.lessons.length} Lessons • ${lecture.enrolledCount} Enrolled • ${lecture.isPaid ? "\$${lecture.price}" : "Free"}',
+                    style: AppTextStyles.caption,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Nav Item ─────────────────────────────────────────────
+class _NavItem {
+  final IconData icon;
+  final String label;
+
+  const _NavItem({required this.icon, required this.label});
+}

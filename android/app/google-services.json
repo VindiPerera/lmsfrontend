@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1030315957216",
+    "project_id": "jaan-lms",
+    "storage_bucket": "jaan-lms.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1030315957216:android:757ed2fe4adddbd5b8a985",
+        "android_client_info": {
+          "package_name": "com.jaannetwork.lms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1030315957216-79mu60pt7otiaal69ltaaoaadl6ts2m1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jaannetwork.lms",
+            "certificate_hash": "5d7026ac65ac26d7d26fbeba3565bbb1cc000997"
+          }
+        },
+        {
+          "client_id": "1030315957216-n9g1d3th65108sretn9lrpov5u38lqap.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF7oa_9w37_haStqv1U0wq7K5Q-s_t4ao"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1030315957216-n9g1d3th65108sretn9lrpov5u38lqap.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1030315957216-1r0fmthpt5p7uvvsb4c5acd3k259onus.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.jaannetwork.lms"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
